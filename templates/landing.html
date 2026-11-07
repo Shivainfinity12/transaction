@@ -21,7 +21,7 @@
         </p>
         <div class="hero-ctas">
             <a href="{{ url_for('register') }}" class="btn-solid">Create free account</a>
-            <a href="#" class="btn-solid">See how it works</a>
+            <button type="button" class="btn-solid" id="how-it-works-btn" aria-haspopup="dialog" aria-controls="how-modal">See how it works</button>
         </div>
     </div>
 
@@ -95,4 +95,70 @@
     </div>
 </section>
 
+<div class="modal-overlay" id="how-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="how-modal-title">
+        <div class="modal-header">
+            <h2 id="how-modal-title">See how Spendly works</h2>
+            <button type="button" class="modal-close" id="how-modal-close" aria-label="Close video">&times;</button>
+        </div>
+        <div class="video-frame">
+            <iframe id="how-video" title="Spendly demo video"
+                    src="about:blank"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen></iframe>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var VIDEO_URL = 'https://www.youtube.com/embed/aqz-KE-bpKQ?rel=0';
+    var openBtn = document.getElementById('how-it-works-btn');
+    var overlay = document.getElementById('how-modal');
+    var closeBtn = document.getElementById('how-modal-close');
+    var video = document.getElementById('how-video');
+    var lastFocused = null;
+    var closeTimer = null;
+
+    function openModal() {
+        if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+        lastFocused = document.activeElement;
+        overlay.hidden = false;
+        requestAnimationFrame(function () {
+            overlay.classList.add('is-open');
+        });
+        video.src = VIDEO_URL; // video only loads when the modal opens
+        document.body.classList.add('modal-open');
+        closeBtn.focus();
+    }
+
+    function closeModal() {
+        overlay.classList.remove('is-open');
+        if (closeTimer) clearTimeout(closeTimer);
+        closeTimer = setTimeout(function () {
+            overlay.hidden = true;
+            video.src = 'about:blank'; // stops playback — no audio in background
+            document.body.classList.remove('modal-open');
+            closeTimer = null;
+        }, 180);
+        if (lastFocused && lastFocused.focus) lastFocused.focus();
+    }
+
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    // Clicking the dark overlay (outside the modal box) closes it
+    overlay.addEventListener('click', function (event) {
+        if (event.target === overlay) closeModal();
+    });
+
+    // Esc key closes
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && !overlay.hidden) closeModal();
+    });
+})();
+</script>
 {% endblock %}
