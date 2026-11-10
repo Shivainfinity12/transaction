@@ -12,7 +12,7 @@
         <div class="profile-details">
             <h2 class="profile-name">{{ user["name"] }}</h2>
             <p class="profile-email">{{ user["email"] }}</p>
-            <p class="member-since">Member since {{ user["created_at"][:10] }}</p>
+            <p class="member-since">Member since {{ user["member_since"] }}</p>
         </div>
     </div>
 
@@ -63,8 +63,8 @@
         <ul class="breakdown-list">
             {% for item in category_breakdown %}
             <li>
-                <span class="category-name">{{ item.category }}</span>
-                <span class="category-total">₹{{ "%.2f"|format(item.total) }}</span>
+                <span class="category-name">{{ item.name }}</span>
+                <span class="category-total">₹{{ "%.2f"|format(item.amount) }}</span>
             </li>
             {% endfor %}
         </ul>

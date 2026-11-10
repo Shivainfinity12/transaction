@@ -1,6 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import check_password_hash
 from database.db import get_db, init_db, seed_db
+from database.queries import (
+    get_category_breakdown,
+    get_recent_transactions,
+    get_summary_stats,
+    get_user_by_id,
+)
 
 app = Flask(__name__)
 app.secret_key = 'spendly-secret-key-change-in-production'
@@ -114,30 +120,35 @@ def logout():
 def profile():
     if not session.get("user_id"):
         return redirect(url_for("login"))
-    db = get_db()
-    user = db.execute(
-        "SELECT name, email, created_at FROM users WHERE id = ?", (session["user_id"],)
-    ).fetchone()
-    db.close()
-    expenses = [
-        {"date": "2026-11-01", "description": "Lunch at cafeteria", "category": "Food", "amount": 12.50},
-        {"date": "2026-11-03", "description": "Electricity bill", "category": "Bills", "amount": 45.00},
-        {"date": "2026-11-05", "description": "Movie tickets", "category": "Entertainment", "amount": 25.00},
-    ]
-    category_totals = {"Food": 37.80, "Bills": 45.00, "Entertainment": 25.00, "Other": 15.00}
-    top_category = max(category_totals, key=category_totals.get)
+
+    user_id = session["user_id"]
+
+    # User info card — query helpers live in database/queries.py
+    user = get_user_by_id(user_id)
+
+    # === BEGIN SUBAGENT 1: transaction history ===
+    expenses = get_recent_transactions(user_id)
+    # === END SUBAGENT 1: transaction history ===
+
+    # === BEGIN SUBAGENT 2: summary stats ===
+    stats = get_summary_stats(user_id)
+    total_spent = stats["total_spent"]
+    transaction_count = stats["transaction_count"]
+    top_category = stats["top_category"]
+    # === END SUBAGENT 2: summary stats ===
+
+    # === BEGIN SUBAGENT 3: category breakdown ===
+    category_breakdown = get_category_breakdown(user_id)
+    # === END SUBAGENT 3: category breakdown ===
+
     return render_template(
         "profile.html",
         user=user,
         expenses=expenses,
-        total_spent=87.50,
-        transaction_count=len(expenses),
+        total_spent=total_spent,
+        transaction_count=transaction_count,
         top_category=top_category,
-        category_breakdown=sorted(
-            [{"category": cat, "total": total} for cat, total in category_totals.items()],
-            key=lambda x: x["total"],
-            reverse=True,
-        ),
+        category_breakdown=category_breakdown,
     )
 
 
