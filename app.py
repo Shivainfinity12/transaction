@@ -112,7 +112,33 @@ def logout():
 
 @app.route("/profile")
 def profile():
-    return "Profile page — coming in Step 4"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+    db = get_db()
+    user = db.execute(
+        "SELECT name, email, created_at FROM users WHERE id = ?", (session["user_id"],)
+    ).fetchone()
+    db.close()
+    expenses = [
+        {"date": "2026-11-01", "description": "Lunch at cafeteria", "category": "Food", "amount": 12.50},
+        {"date": "2026-11-03", "description": "Electricity bill", "category": "Bills", "amount": 45.00},
+        {"date": "2026-11-05", "description": "Movie tickets", "category": "Entertainment", "amount": 25.00},
+    ]
+    category_totals = {"Food": 37.80, "Bills": 45.00, "Entertainment": 25.00, "Other": 15.00}
+    top_category = max(category_totals, key=category_totals.get)
+    return render_template(
+        "profile.html",
+        user=user,
+        expenses=expenses,
+        total_spent=87.50,
+        transaction_count=len(expenses),
+        top_category=top_category,
+        category_breakdown=sorted(
+            [{"category": cat, "total": total} for cat, total in category_totals.items()],
+            key=lambda x: x["total"],
+            reverse=True,
+        ),
+    )
 
 
 @app.route("/expenses/add")
