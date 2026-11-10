@@ -120,7 +120,7 @@ Save to: `.opencode/specs/<step_number>-<feature_slug>.md`
 Print a short summary in this exact format:
 ```
 Branch:    <branch_name>
-Spec file: .claude/specs/<step_number>-<feature_slug>.md
+Spec file: .opencode/specs/<step_number>-<feature_slug>.md
 Title:     <feature_title>
 ```
 
