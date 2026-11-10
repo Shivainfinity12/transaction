@@ -56,3 +56,5 @@ No new pip packages — the feature uses existing Flask, SQLite, and werkzeug de
 - [ ] Login template extends `base.html` and uses consistent styling
 - [ ] No raw SQL strings — all queries use `?` placeholders
 - [ ] Passwords are verified (not stored or compared as plain text)
+
+

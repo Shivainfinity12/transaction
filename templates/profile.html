@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Profile — Spendly{% endblock %}
+
+{% block content %}
+
+<div class="profile-section">
+
+    <!-- User info card -->
+    <div class="profile-card">
+        <div class="profile-avatar">{{ user["name"][0] }}</div>
+        <div class="profile-details">
+            <h2 class="profile-name">{{ user["name"] }}</h2>
+            <p class="profile-email">{{ user["email"] }}</p>
+            <p class="member-since">Member since {{ user["created_at"][:10] }}</p>
+        </div>
+    </div>
+
+    <!-- Summary stats row -->
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-value">₹{{ "%.2f"|format(total_spent) }}</div>
+            <div class="stat-label">Total Spent</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value">{{ transaction_count }}</div>
+            <div class="stat-label">Transactions</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value">{{ top_category }}</div>
+            <div class="stat-label">Top Category</div>
+        </div>
+    </div>
+
+    <!-- Transaction history table -->
+    <div class="table-section">
+        <h3 class="section-title">Recent Transactions</h3>
+        <table class="profile-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr>
+                    <td>{{ expense.date }}</td>
+                    <td>{{ expense.description }}</td>
+                    <td><span class="category-badge category-{{ expense.category | lower }}">{{ expense.category }}</span></td>
+                    <td>₹{{ "%.2f"|format(expense.amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Category breakdown -->
+    <div class="breakdown-section">
+        <h3 class="section-title">Category Breakdown</h3>
+        <ul class="breakdown-list">
+            {% for item in category_breakdown %}
+            <li>
+                <span class="category-name">{{ item.category }}</span>
+                <span class="category-total">₹{{ "%.2f"|format(item.total) }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+</div>
+
+{% endblock %}
