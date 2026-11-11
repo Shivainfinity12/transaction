@@ -2,6 +2,10 @@
 
 {% block title %}Profile — Spendly{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile-filter.css') }}">
+{% endblock %}
+
 {% block content %}
 
 <div class="profile-section">
@@ -15,6 +19,25 @@
             <p class="member-since">Member since {{ user["member_since"] }}</p>
         </div>
     </div>
+
+    <!-- Date range filter -->
+    <form method="get" action="{{ url_for('profile') }}" class="filter-bar">
+        <label class="filter-label" for="filter-range">Show</label>
+        <select name="range" id="filter-range" class="filter-select">
+            {% for value, label in date_presets %}
+            <option value="{{ value }}" {% if filter_range == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <input type="date" name="start" id="filter-start" class="filter-input" aria-label="From date" {% if filter_range == 'custom' %}value="{{ filter_start }}"{% endif %}>
+        <input type="date" name="end" id="filter-end" class="filter-input" aria-label="To date" {% if filter_range == 'custom' %}value="{{ filter_end }}"{% endif %}>
+        <button type="submit" class="filter-apply">Apply</button>
+        {% if filter_active %}
+        <a href="{{ url_for('profile') }}" class="filter-clear">Clear filter</a>
+        {% endif %}
+    </form>
+    {% if filter_active %}
+    <p class="filter-summary">Showing: {{ filter_label }}</p>
+    {% endif %}
 
     <!-- Summary stats row -->
     <div class="stats-row">
@@ -35,6 +58,7 @@
     <!-- Transaction history table -->
     <div class="table-section">
         <h3 class="section-title">Recent Transactions</h3>
+        {% if expenses %}
         <table class="profile-table">
             <thead>
                 <tr>
@@ -55,11 +79,15 @@
                 {% endfor %}
             </tbody>
         </table>
+        {% else %}
+        <p class="empty-state">No expenses found for this period.</p>
+        {% endif %}
     </div>
 
     <!-- Category breakdown -->
     <div class="breakdown-section">
         <h3 class="section-title">Category Breakdown</h3>
+        {% if category_breakdown %}
         <ul class="breakdown-list">
             {% for item in category_breakdown %}
             <li>
@@ -68,6 +96,9 @@
             </li>
             {% endfor %}
         </ul>
+        {% else %}
+        <p class="empty-state">No category data for this period.</p>
+        {% endif %}
     </div>
 
 </div>

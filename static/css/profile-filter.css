@@ -1,0 +1,89 @@
+/* ------------------------------------------------------------------ */
+/* Profile date filter — Step 06                                       */
+/* Loaded only by profile.html via base.html's head block.             */
+/* Colors come from the variables defined in style.css — no hex here.  */
+/* ------------------------------------------------------------------ */
+
+.filter-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 1.4rem 0;
+    padding: 1rem 1.2rem;
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.filter-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.filter-select,
+.filter-input {
+    padding: 0.45rem 0.7rem;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.filter-select:focus,
+.filter-input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+}
+
+.filter-apply {
+    padding: 0.5rem 1.4rem;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--paper-card);
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.filter-apply:hover {
+    background: var(--ink);
+    border-color: var(--ink);
+}
+
+.filter-clear {
+    font-size: 0.9rem;
+    color: var(--danger);
+    text-decoration: underline;
+}
+
+.filter-summary {
+    margin: 0 0 1.4rem;
+    font-size: 0.9rem;
+    color: var(--ink-muted);
+}
+
+.empty-state {
+    padding: 1.6rem 0;
+    font-size: 0.95rem;
+    color: var(--ink-muted);
+    text-align: center;
+}
+
+/* Match style.css's 720px profile breakpoint: filter controls go
+   full-width on small screens. */
+@media (max-width: 720px) {
+    .filter-select,
+    .filter-input,
+    .filter-apply {
+        flex: 1 1 100%;
+    }
+}

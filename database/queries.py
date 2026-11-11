@@ -1,6 +1,12 @@
 """Pure SQLite query helpers for the profile page.
 
 Step 5 — Backend Connection (.opencode/specs/05-backend-routes-for-profile-page.md)
+Step 06 — Date Filter (.opencode/specs/06-date-filter-for-profile-page.md) added
+optional start_date/end_date bounds to the three profile helpers below.
+
+Date bounds shared by every helper: start_date and end_date are optional
+inclusive bounds in YYYY-MM-DD format (expenses.date is TEXT, so plain
+lexicographic comparison is correct). None means unbounded on that side.
 
 Rules for every helper in this module:
 - Raw sqlite3 only via get_db() — no ORMs
@@ -12,6 +18,24 @@ Rules for every helper in this module:
 from datetime import datetime
 
 from database.db import get_db
+
+
+def _expense_where_clause(user_id, start_date, end_date):
+    """Shared WHERE clause: user ownership plus optional date bounds.
+
+    Clause text is literal; every value travels via a ? placeholder.
+    Returns (where_clause, params) — extend both with further literal
+    clauses (ORDER BY, LIMIT, GROUP BY) before executing.
+    """
+    where = "WHERE user_id = ?"
+    params = [user_id]
+    if start_date is not None:
+        where += " AND date >= ?"
+        params.append(start_date)
+    if end_date is not None:
+        where += " AND date <= ?"
+        params.append(end_date)
+    return where, params
 
 
 def get_user_by_id(user_id):
@@ -42,23 +66,28 @@ def get_user_by_id(user_id):
     }
 
 
-def get_recent_transactions(user_id, limit=10):
+def get_recent_transactions(user_id, limit=10, start_date=None, end_date=None):
     """Return the user's most recent transactions, newest first.
+
+    Optional inclusive date bounds — see the module docstring.
 
     Returns a list of plain dicts, each with keys "date", "description",
     "category" and "amount", ordered newest-first (date DESC, then id DESC
     for stable ordering of same-date rows). Returns [] when the user has
-    no expenses.
+    no expenses in the (possibly filtered) period.
     """
-    # === SUBAGENT 1: transaction history ===
+    where, params = _expense_where_clause(user_id, start_date, end_date)
+    params.append(limit)
+
+    query = (
+        "SELECT date, description, category, amount "
+        "FROM expenses " + where + " "
+        "ORDER BY date DESC, id DESC LIMIT ?"
+    )
+
     db = get_db()
     try:
-        rows = db.execute(
-            "SELECT date, description, category, amount "
-            "FROM expenses WHERE user_id = ? "
-            "ORDER BY date DESC, id DESC LIMIT ?",
-            (user_id, limit),
-        ).fetchall()
+        rows = db.execute(query, params).fetchall()
     finally:
         db.close()
 
@@ -71,31 +100,36 @@ def get_recent_transactions(user_id, limit=10):
         }
         for row in rows
     ]
-    # === END SUBAGENT 1 ===
 
 
-def get_summary_stats(user_id):
+def get_summary_stats(user_id, start_date=None, end_date=None):
     """Return summary stats for the user's expenses as a dict.
+
+    Optional inclusive date bounds — see the module docstring. Both
+    queries below use the same bounds so the stats describe the same
+    filtered period.
 
     Returns {"total_spent": float, "transaction_count": int,
     "top_category": str} where top_category is the category with the
-    highest SUM(amount). When the user has no expenses, returns
-    {"total_spent": 0, "transaction_count": 0, "top_category": "—"}.
+    highest SUM(amount). When the user has no expenses in the filtered
+    period, returns {"total_spent": 0, "transaction_count": 0,
+    "top_category": "—"}.
     """
-    # === SUBAGENT 2: summary stats ===
+    where, params = _expense_where_clause(user_id, start_date, end_date)
+
     db = get_db()
     try:
         totals = db.execute(
             "SELECT COALESCE(SUM(amount), 0) AS total_spent,"
             " COUNT(*) AS transaction_count"
-            " FROM expenses WHERE user_id = ?",
-            (user_id,),
+            " FROM expenses " + where,
+            params,
         ).fetchone()
         top = db.execute(
             "SELECT category"
-            " FROM expenses WHERE user_id = ?"
+            " FROM expenses " + where +
             " GROUP BY category ORDER BY SUM(amount) DESC LIMIT 1",
-            (user_id,),
+            params,
         ).fetchone()
     finally:
         db.close()
@@ -105,27 +139,30 @@ def get_summary_stats(user_id):
         "transaction_count": totals["transaction_count"],
         "top_category": top["category"] if top is not None else "—",
     }
-    # === END SUBAGENT 2 ===
 
 
-def get_category_breakdown(user_id):
+def get_category_breakdown(user_id, start_date=None, end_date=None):
     """Return the user's spending per category as a list of dicts.
+
+    Optional inclusive date bounds — see the module docstring.
+    Percentages are computed within the filtered period.
 
     Each dict has keys "name" (category), "amount" (SUM of that
     category's expenses) and "pct" (integer percentage of the user's
     total spending). Ordered by amount descending. The pct values are
     integers that sum to exactly 100: floor each share, then the largest
     category absorbs the rounding remainder. Returns [] when the user
-    has no expenses.
+    has no expenses in the (possibly filtered) period.
     """
-    # === SUBAGENT 3: category breakdown ===
+    where, params = _expense_where_clause(user_id, start_date, end_date)
+
     db = get_db()
     try:
         rows = db.execute(
             "SELECT category, SUM(amount) AS total "
-            "FROM expenses WHERE user_id = ? "
+            "FROM expenses " + where + " "
             "GROUP BY category ORDER BY total DESC",
-            (user_id,),
+            params,
         ).fetchall()
     finally:
         db.close()
@@ -150,4 +187,3 @@ def get_category_breakdown(user_id):
         breakdown[0]["pct"] += remainder
 
     return breakdown
-    # === END SUBAGENT 3 ===
