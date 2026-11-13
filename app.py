@@ -1,18 +1,41 @@
 import calendar
+import math
 from datetime import date, datetime, timedelta
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import check_password_hash
+# insert_expense is database.db.add_expense, aliased because the route
+# function below is itself named add_expense.
+from database.db import add_expense as insert_expense
 from database.db import get_db, init_db, seed_db
 from database.queries import (
     get_category_breakdown,
     get_recent_transactions,
     get_summary_stats,
     get_user_by_id,
+    get_user_name,
 )
 
 app = Flask(__name__)
 app.secret_key = 'spendly-secret-key-change-in-production'
+
+
+# ------------------------------------------------------------------ #
+# Template globals (navbar avatar — Step 07)                          #
+# ------------------------------------------------------------------ #
+
+@app.context_processor
+def inject_avatar_initial():
+    """Expose the logged-in user's initial to every template.
+
+    base.html renders it inside the navbar avatar that links to the
+    profile page. Logged-out renders pass nothing (no avatar shown).
+    """
+    if not session.get("user_id"):
+        return {}
+    name = get_user_name(session["user_id"])
+    initial = name.strip()[:1].upper() if name and name.strip() else "?"
+    return {"avatar_initial": initial}
 
 
 # ------------------------------------------------------------------ #
@@ -65,6 +88,34 @@ def _resolve_date_range(range_key, start_raw, end_raw):
 def _format_date_label(date_str):
     """Format a YYYY-MM-DD string as a short label, e.g. "Nov 1, 2026"."""
     return datetime.strptime(date_str, "%Y-%m-%d").strftime("%b %d, %Y")
+
+
+# ------------------------------------------------------------------ #
+# Add expense (Step 07)                                               #
+# ------------------------------------------------------------------ #
+
+# Fixed expense categories from Step 01 — the add-expense form's
+# <select> options and the POST validation whitelist share this list.
+EXPENSE_CATEGORIES = ["Food", "Transport", "Bills", "Health",
+                      "Entertainment", "Shopping", "Other"]
+
+
+def _render_add_expense(error=None, amount_value="", category_value="Food",
+                        date_value=None, description_value=""):
+    """Render the add-expense form, prefilled with the given values.
+
+    GET passes no values (date defaults to today); POST re-renders pass
+    back whatever the user submitted so the form keeps their input.
+    """
+    return render_template(
+        "add_expense.html",
+        categories=EXPENSE_CATEGORIES,
+        error=error,
+        amount_value=amount_value,
+        category_value=category_value,
+        date_value=date_value or date.today().isoformat(),
+        description_value=description_value,
+    )
 
 
 # ------------------------------------------------------------------ #
@@ -232,9 +283,75 @@ def profile():
     )
 
 
-@app.route("/expenses/add")
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return "Add expense — coming in Step 7"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+
+    if request.method == "POST":
+        amount_raw = request.form.get("amount", "").strip()
+        category = request.form.get("category", "").strip()
+        date_raw = request.form.get("date", "").strip()
+        description_raw = request.form.get("description", "").strip()
+
+        # Amount — parsed and rounded to 2 decimals, and the rounded
+        # value must still be positive (rejects "0", "-5", "abc" and
+        # sub-cent inputs like "0.001" that round to nothing).
+        try:
+            amount = round(float(amount_raw), 2)
+        except ValueError:
+            amount = None
+        if amount is None or not math.isfinite(amount) or amount <= 0:
+            return _render_add_expense(
+                error="Amount must be a positive number",
+                amount_value=amount_raw,
+                category_value=category,
+                date_value=date_raw,
+                description_value=description_raw,
+            )
+
+        # Category — must be exactly one of the fixed list.
+        if category not in EXPENSE_CATEGORIES:
+            return _render_add_expense(
+                error="Please choose a valid category",
+                amount_value=amount_raw,
+                category_value=category,
+                date_value=date_raw,
+                description_value=description_raw,
+            )
+
+        # Date — empty means today; anything else must parse as YYYY-MM-DD.
+        if date_raw:
+            try:
+                expense_date = datetime.strptime(date_raw, "%Y-%m-%d").date().isoformat()
+            except ValueError:
+                return _render_add_expense(
+                    error="Date must be in YYYY-MM-DD format",
+                    amount_value=amount_raw,
+                    category_value=category,
+                    date_value=date_raw,
+                    description_value=description_raw,
+                )
+        else:
+            expense_date = date.today().isoformat()
+
+        # Description — optional; empty becomes a real NULL in the DB.
+        if len(description_raw) > 200:
+            return _render_add_expense(
+                error="Description must be 200 characters or fewer",
+                amount_value=amount_raw,
+                category_value=category,
+                date_value=date_raw,
+                description_value=description_raw,
+            )
+        description = description_raw or None
+
+        insert_expense(user_id, amount, category, expense_date, description)
+        return redirect(url_for("profile"))
+
+    return _render_add_expense(date_value=date.today().isoformat())
 
 
 @app.route("/expenses/<int:id>/edit")
