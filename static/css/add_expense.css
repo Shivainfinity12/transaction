@@ -1,0 +1,33 @@
+/* ------------------------------------------------------------------ */
+/* Add expense page — Step 07                                          */
+/* Loaded only by add_expense.html via base.html's head block.         */
+/* Colors come from the variables defined in style.css — no hex here.  */
+/* ------------------------------------------------------------------ */
+
+/* Amount and date sit side by side on wide screens. */
+.form-row {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+select.form-input {
+    cursor: pointer;
+}
+
+.optional {
+    font-weight: 400;
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+}
+
+/* Stack the paired fields once the auth card goes narrow. */
+@media (max-width: 600px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+}
