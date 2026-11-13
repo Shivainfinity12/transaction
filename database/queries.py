@@ -66,6 +66,22 @@ def get_user_by_id(user_id):
     }
 
 
+def get_user_name(user_id):
+    """Return the user's display name, or None if no such user exists.
+
+    Lightweight lookup used by the navbar avatar's initial on every page.
+    """
+    db = get_db()
+    try:
+        row = db.execute(
+            "SELECT name FROM users WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+        return row["name"] if row else None
+    finally:
+        db.close()
+
+
 def get_recent_transactions(user_id, limit=10, start_date=None, end_date=None):
     """Return the user's most recent transactions, newest first.
 
