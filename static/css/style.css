@@ -501,6 +501,17 @@ a { color: inherit; text-decoration: none; }
 
 .btn-submit:hover { background: var(--accent); }
 
+/* Destructive submit button (delete-expense confirmation — Step 09).
+   Declared after .btn-submit so the background override wins on hover. */
+.btn-danger {
+    background: var(--danger);
+}
+
+.btn-danger:hover {
+    background: var(--danger);
+    opacity: 0.9;
+}
+
 .auth-switch {
     text-align: center;
     font-size: 0.875rem;
@@ -751,19 +762,43 @@ a { color: inherit; text-decoration: none; }
     text-align: right;
 }
 
-/* Per-row action link (Edit — Step 08; Delete will reuse this in Step 09) */
+/* Per-row action button (Edit — Step 08; Delete — Step 09 — uses the
+   destructive variant below). Styled as a small chip so the row actions
+   read as tappable buttons rather than plain text links. */
 
 .table-action {
-    font-size: 0.85rem;
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.8rem;
     font-weight: 500;
+    line-height: 1;
     color: var(--accent);
     text-decoration: none;
-    border-bottom: 1px solid transparent;
-    transition: border-bottom-color 0.15s ease;
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+/* Space the chips apart when several share a cell (Edit + Delete). */
+.table-action + .table-action {
+    margin-left: 0.4rem;
 }
 
 .table-action:hover {
-    border-bottom-color: var(--accent);
+    background: var(--accent-light);
+    border-color: var(--accent);
+}
+
+/* Per-row action button, destructive variant (Delete — Step 09) */
+
+.table-action-danger {
+    color: var(--danger);
+}
+
+.table-action-danger:hover {
+    background: var(--danger-light);
+    border-color: var(--danger);
 }
 
 /* Category breakdown — full width, aligned with the table above */
