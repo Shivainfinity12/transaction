@@ -1,6 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* Add expense page — Step 07                                          */
-/* Loaded only by add_expense.html via base.html's head block.         */
+/* Loaded by add_expense.html, edit_expense.html (Step 08) and         */
+/* delete_expense.html (Step 09) via base.html's head block.           */
 /* Colors come from the variables defined in style.css — no hex here.  */
 /* ------------------------------------------------------------------ */
 
@@ -30,4 +31,39 @@ select.form-input {
         flex-direction: column;
         gap: 0;
     }
+}
+
+/* Delete-expense confirmation summary (Step 09) — a read-only recap
+   of the expense about to be removed, shown before the POST lands. */
+
+.delete-summary {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.25rem;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    background: var(--paper-warm);
+}
+
+.delete-summary li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.delete-summary li:last-child {
+    border-bottom: none;
+}
+
+.delete-label {
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+}
+
+.delete-value {
+    font-weight: 600;
+    color: var(--ink);
 }

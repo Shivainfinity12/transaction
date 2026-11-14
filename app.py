@@ -7,6 +7,9 @@ from werkzeug.security import check_password_hash
 # insert_expense is database.db.add_expense, aliased because the route
 # function below is itself named add_expense.
 from database.db import add_expense as insert_expense
+# remove_expense is database.db.delete_expense, aliased because the route
+# function below is itself named delete_expense.
+from database.db import delete_expense as remove_expense
 from database.db import get_db, get_expense_by_id, init_db, seed_db, update_expense
 from database.queries import (
     get_category_breakdown,
@@ -18,6 +21,9 @@ from database.queries import (
 
 app = Flask(__name__)
 app.secret_key = 'spendly-secret-key-change-in-production'
+# Explicit SameSite=Lax keeps the session cookie off cross-site POSTs —
+# the one-line CSRF mitigation for this app's destructive POST routes.
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 
 # ------------------------------------------------------------------ #
@@ -472,9 +478,34 @@ def edit_expense(id):
     )
 
 
-@app.route("/expenses/<int:id>/delete")
+@app.route("/expenses/<int:id>/delete", methods=["GET", "POST"])
 def delete_expense(id):
-    return "Delete expense — coming in Step 9"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+
+    if request.method == "POST":
+        # Ownership lookup first — same guard -> lookup -> mutate shape
+        # as the edit route. A missing row or another user's row is a
+        # 404 before anything is touched; a row that vanishes between
+        # the lookup and the DELETE (concurrent delete) still maps to
+        # a 404 via the rowcount check below.
+        expense = get_expense_by_id(id, user_id)
+        if expense is None:
+            abort(404)
+        removed = remove_expense(id, user_id)
+        if removed == 0:
+            abort(404)
+        return redirect(url_for("profile"))
+
+    # GET — confirmation page only; nothing is deleted until the form
+    # is submitted. Ownership lookup first, exactly like the edit route:
+    # a missing id or another user's row is a 404.
+    expense = get_expense_by_id(id, user_id)
+    if expense is None:
+        abort(404)
+    return render_template("delete_expense.html", expense=expense)
 
 
 with app.app_context():

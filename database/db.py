@@ -133,3 +133,23 @@ def update_expense(expense_id, user_id, amount, category, date, description):
         return cursor.rowcount
     finally:
         db.close()
+
+
+def delete_expense(expense_id, user_id):
+    """Delete an expense owned by user_id; return the number of rows deleted.
+
+    Mirrors update_expense(): the DELETE is scoped by both id and
+    user_id, so a row that does not exist, or that belongs to a
+    different user, leaves rowcount at 0 — callers turn that into a
+    404 without revealing whether the row exists for someone else.
+    """
+    db = get_db()
+    try:
+        cursor = db.execute(
+            "DELETE FROM expenses WHERE id = ? AND user_id = ?",
+            (expense_id, user_id),
+        )
+        db.commit()
+        return cursor.rowcount
+    finally:
+        db.close()
