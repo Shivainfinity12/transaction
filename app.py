@@ -2,12 +2,12 @@ import calendar
 import math
 from datetime import date, datetime, timedelta
 
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, abort, render_template, request, redirect, url_for, session
 from werkzeug.security import check_password_hash
 # insert_expense is database.db.add_expense, aliased because the route
 # function below is itself named add_expense.
 from database.db import add_expense as insert_expense
-from database.db import get_db, init_db, seed_db
+from database.db import get_db, get_expense_by_id, init_db, seed_db, update_expense
 from database.queries import (
     get_category_breakdown,
     get_recent_transactions,
@@ -114,6 +114,28 @@ def _render_add_expense(error=None, amount_value="", category_value="Food",
         amount_value=amount_value,
         category_value=category_value,
         date_value=date_value or date.today().isoformat(),
+        description_value=description_value,
+    )
+
+
+def _render_edit_expense(expense_id, error=None, amount_value="",
+                         category_value="Food", date_value="",
+                         description_value=""):
+    """Render the edit-expense form, prefilled with the given values.
+
+    GET passes the expense's stored values; POST re-renders pass back
+    whatever the user submitted so the form keeps their input.
+    expense_id is needed on both paths — the form's action targets this
+    specific row's /expenses/<id>/edit URL.
+    """
+    return render_template(
+        "edit_expense.html",
+        categories=EXPENSE_CATEGORIES,
+        error=error,
+        expense_id=expense_id,
+        amount_value=amount_value,
+        category_value=category_value,
+        date_value=date_value,
         description_value=description_value,
     )
 
@@ -354,9 +376,100 @@ def add_expense():
     return _render_add_expense(date_value=date.today().isoformat())
 
 
-@app.route("/expenses/<int:id>/edit")
+@app.route("/expenses/<int:id>/edit", methods=["GET", "POST"])
 def edit_expense(id):
-    return "Edit expense — coming in Step 8"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+
+    # Ownership lookup — a missing id or another user's row is a 404,
+    # checked before validation so POST leaks nothing either way.
+    expense = get_expense_by_id(id, user_id)
+    if expense is None:
+        abort(404)
+
+    if request.method == "POST":
+        amount_raw = request.form.get("amount", "").strip()
+        category = request.form.get("category", "").strip()
+        date_raw = request.form.get("date", "").strip()
+        description_raw = request.form.get("description", "").strip()
+
+        # Amount — same rules as the add form: parsed, rounded to 2
+        # decimals, and the rounded value must still be positive.
+        try:
+            amount = round(float(amount_raw), 2)
+        except ValueError:
+            amount = None
+        if amount is None or not math.isfinite(amount) or amount <= 0:
+            return _render_edit_expense(
+                id,
+                error="Amount must be a positive number",
+                amount_value=amount_raw,
+                category_value=category,
+                date_value=date_raw,
+                description_value=description_raw,
+            )
+
+        # Category — must be exactly one of the fixed list.
+        if category not in EXPENSE_CATEGORIES:
+            return _render_edit_expense(
+                id,
+                error="Please choose a valid category",
+                amount_value=amount_raw,
+                category_value=category,
+                date_value=date_raw,
+                description_value=description_raw,
+            )
+
+        # Date — required on edit (no "today" fallback like the add
+        # form) and must parse as YYYY-MM-DD.
+        expense_date = None
+        if date_raw:
+            try:
+                expense_date = datetime.strptime(date_raw, "%Y-%m-%d").date().isoformat()
+            except ValueError:
+                expense_date = None
+        if expense_date is None:
+            return _render_edit_expense(
+                id,
+                error="Date must be in YYYY-MM-DD format",
+                amount_value=amount_raw,
+                category_value=category,
+                date_value=date_raw,
+                description_value=description_raw,
+            )
+
+        # Description — optional; empty becomes a real NULL in the DB.
+        if len(description_raw) > 200:
+            return _render_edit_expense(
+                id,
+                error="Description must be 200 characters or fewer",
+                amount_value=amount_raw,
+                category_value=category,
+                date_value=date_raw,
+                description_value=description_raw,
+            )
+        description = description_raw or None
+
+        updated = update_expense(
+            id, user_id, amount, category, expense_date, description
+        )
+        if updated == 0:
+            # The row vanished between the ownership lookup and the
+            # UPDATE (concurrent delete) — never report success.
+            abort(404)
+        return redirect(url_for("profile"))
+
+    # GET — prefill from the stored row; a REAL amount formats as "45.00"
+    # and a NULL description renders as an empty field.
+    return _render_edit_expense(
+        id,
+        amount_value=f"{expense['amount']:.2f}",
+        category_value=expense["category"],
+        date_value=expense["date"],
+        description_value=expense["description"] or "",
+    )
 
 
 @app.route("/expenses/<int:id>/delete")
