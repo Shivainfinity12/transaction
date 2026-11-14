@@ -95,3 +95,41 @@ def add_expense(user_id, amount, category, date, description):
         return cursor.lastrowid
     finally:
         db.close()
+
+
+def get_expense_by_id(expense_id, user_id):
+    """Return the expense row with expense_id owned by user_id, or None.
+
+    Scoped by both id and user_id: a row that does not exist, or that
+    belongs to a different user, returns None — callers turn that into
+    a 404 without revealing whether the row exists for someone else.
+    """
+    db = get_db()
+    try:
+        return db.execute(
+            "SELECT id, user_id, amount, category, date, description "
+            "FROM expenses WHERE id = ? AND user_id = ?",
+            (expense_id, user_id),
+        ).fetchone()
+    finally:
+        db.close()
+
+
+def update_expense(expense_id, user_id, amount, category, date, description):
+    """Update an expense owned by user_id; return the number of rows updated.
+
+    Mirrors add_expense(): amount is a float rounded to 2 decimals, date
+    a YYYY-MM-DD string, description may be None (stored as NULL). A
+    return of 0 means the row was missing or not owned by user_id.
+    """
+    db = get_db()
+    try:
+        cursor = db.execute(
+            "UPDATE expenses SET amount = ?, category = ?, date = ?, description = ? "
+            "WHERE id = ? AND user_id = ?",
+            (amount, category, date, description, expense_id, user_id),
+        )
+        db.commit()
+        return cursor.rowcount
+    finally:
+        db.close()

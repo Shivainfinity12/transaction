@@ -87,16 +87,19 @@ def get_recent_transactions(user_id, limit=10, start_date=None, end_date=None):
 
     Optional inclusive date bounds — see the module docstring.
 
-    Returns a list of plain dicts, each with keys "date", "description",
-    "category" and "amount", ordered newest-first (date DESC, then id DESC
-    for stable ordering of same-date rows). Returns [] when the user has
-    no expenses in the (possibly filtered) period.
+    Returns a list of plain dicts, each with keys "id", "date",
+    "description", "category" and "amount", ordered newest-first
+    (date DESC, then id DESC for stable ordering of same-date rows).
+    "id" exists so pages rendering transactions (e.g. the profile
+    table's Edit links, Step 08) can target individual rows.
+    Returns [] when the user has no expenses in the (possibly filtered)
+    period.
     """
     where, params = _expense_where_clause(user_id, start_date, end_date)
     params.append(limit)
 
     query = (
-        "SELECT date, description, category, amount "
+        "SELECT id, date, description, category, amount "
         "FROM expenses " + where + " "
         "ORDER BY date DESC, id DESC LIMIT ?"
     )
@@ -109,6 +112,7 @@ def get_recent_transactions(user_id, limit=10, start_date=None, end_date=None):
 
     return [
         {
+            "id": row["id"],
             "date": row["date"],
             "description": row["description"],
             "category": row["category"],

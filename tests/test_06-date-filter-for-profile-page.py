@@ -465,7 +465,7 @@ def test_db_recent_transactions_filtered_to_nov_1_to_3(seeded_db):
     ]
     assert sum(row["amount"] for row in rows) == pytest.approx(66.25)
     for row in rows:
-        assert set(row) == {"date", "description", "category", "amount"}
+        assert set(row) == {"id", "date", "description", "category", "amount"}
         category, amount, description = SEED_BY_DATE[row["date"]]
         assert row["category"] == category
         assert row["amount"] == pytest.approx(amount)

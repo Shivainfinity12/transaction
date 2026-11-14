@@ -92,7 +92,7 @@ def test_get_recent_transactions_ordered_newest_first(seeded_db):
     rows = get_recent_transactions(1)
     assert len(rows) == 8
     for row in rows:
-        assert set(row) == {"date", "description", "category", "amount"}
+        assert set(row) == {"id", "date", "description", "category", "amount"}
     dates = [row["date"] for row in rows]
     assert dates == sorted(dates, reverse=True)
     assert rows[0]["date"] == "2026-11-08"
